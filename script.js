@@ -111,15 +111,24 @@ document.getElementById('btn-game').onclick = () => {
     let deck = [];
     
     set.forEach(p => { 
-        deck.push({text: p.de, match: p.tr, lang: "lang-de"}); 
-        deck.push({text: p.tr, match: p.de, lang: "lang-tr"}); 
+        deck.push({text: p.de, match: p.tr, lang: "de"}); 
+        deck.push({text: p.tr, match: p.de, lang: "tr"}); 
     });
     
     deck.sort(() => Math.random() - 0.5);
     deck.forEach(card => {
         const div = document.createElement('div'); 
-        div.className = `game-card ${card.lang}`; 
+        div.className = 'game-card'; 
         div.innerText = card.text;
+        
+        // INLINE STYLES: This forces the color, ignoring any cached CSS
+        if (card.lang === "de") {
+            div.style.color = "#ffaa00"; // Neon Orange
+            div.style.textShadow = "0 0 8px #ffaa0088";
+        } else {
+            div.style.color = "#39ff14"; // Neon Green
+            div.style.textShadow = "0 0 8px #39ff1488";
+        }
         
         div.onclick = () => {
             if (div.classList.contains('correct') || div.classList.contains('selected')) return;
