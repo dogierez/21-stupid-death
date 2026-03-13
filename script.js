@@ -5,14 +5,12 @@ const splash = document.getElementById('splash-screen'), instr = document.getEle
       gameZone = document.getElementById('game-zone'), gameBoard = document.getElementById('game-board'),
       feedbackArea = document.getElementById('quiz-feedback-area'), ptsVal = document.getElementById('points-val');
 
-// New local storage keys so it doesn't overwrite your Survival App
 let lifetimeScore = parseInt(localStorage.getItem('darwinScoreDE')) || 0;
 let completedLessons = JSON.parse(localStorage.getItem('completedDarwinLessonsDE')) || [];
 if(ptsVal) ptsVal.innerText = lifetimeScore;
 
 let wordBucket = []; let currentQ = 0; let attempts = 0; let totalScore = 0; let firstCard = null;
 
-// Force voices to load into the browser early
 let availableVoices = [];
 window.speechSynthesis.onvoiceschanged = () => {
     availableVoices = window.speechSynthesis.getVoices();
@@ -70,8 +68,6 @@ document.getElementById('btn-back').onclick = () => {
 document.getElementById('btn-start').onclick = () => { 
     splash.classList.add('hidden'); 
     instr.classList.remove('hidden'); 
-    
-    // Silent unlock for iOS browser audio engines
     const unlockSpeech = new SpeechSynthesisUtterance('');
     window.speechSynthesis.speak(unlockSpeech);
 };
@@ -132,7 +128,7 @@ document.getElementById('btn-game').onclick = () => {
 };
 
 document.getElementById('btn-bowling').onclick = () => {
-    audio.pause(); // Ensure main story audio is paused before entering quiz
+    audio.pause();
     let fn = decodeURIComponent(audio.src.split('/').pop()); 
     const lesson = lessonData[fn][0];
     transcript.classList.add('hidden'); gameZone.classList.remove('hidden'); gameBoard.style.display = "none";
@@ -147,7 +143,6 @@ function runQuiz(lesson) {
         <div id="quiz-container">
             <div class="score-badge">SCORE: ${totalScore} | Q: ${currentQ+1}/7</div>
             <button id="btn-hear-q" class="mode-btn neon-green">👂 FRAGE HÖREN</button>
-            
             <div id="mic-box" style="margin-top:20px;">
                 <button id="btn-speak" class="mic-btn">🎤</button>
                 <p id="mic-status" style="color:#aaa; font-weight:bold;">Tippe auf das Mikrofon zum Sprechen</p>
@@ -159,7 +154,6 @@ function runQuiz(lesson) {
         audio.pause(); 
         window.speechSynthesis.cancel(); 
         
-        // 100ms delay to clear Chrome engine
         setTimeout(() => {
             const utter = new SpeechSynthesisUtterance(qData.q);
             window.currentUtter = utter; 
@@ -174,12 +168,6 @@ function runQuiz(lesson) {
                     utter.voice = deVoice;
                 }
             }
-            
-            utter.onerror = (e) => {
-                console.error("Speech Synthesis Error: ", e);
-                alert("Audio-Fehler: Dein Browser kann den Text nicht vorlesen.");
-            };
-            
             window.speechSynthesis.speak(utter);
         }, 100);
     };
@@ -189,7 +177,7 @@ function runQuiz(lesson) {
         const SpeechRec = window.webkitSpeechRecognition || window.SpeechRecognition;
         
         if (!SpeechRec) {
-            status.innerHTML = "⚠️ Safari/iOS erfordert Erlaubnis oder blockiert das Mikrofon.";
+            status.innerHTML = "⚠️ Browser blockiert das Mikrofon.";
             status.style.color = "#ff4444";
             return;
         }
@@ -209,7 +197,6 @@ function runQuiz(lesson) {
         window.currentRec.onresult = (e) => {
             const rawTranscript = e.results[0][0].transcript;
             const res = rawTranscript.toLowerCase().trim().replace(/[^a-z0-9äöüß]/g, "");
-            
             const rawAns = qData.a_de || qData.a_en || ""; 
             const ans = rawAns.toLowerCase().trim().replace(/[^a-z0-9äöüß]/g, "");
             
