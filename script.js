@@ -11,6 +11,11 @@ if(ptsVal) ptsVal.innerText = lifetimeScore;
 
 let wordBucket = []; let currentQ = 0; let attempts = 0; let totalScore = 0; let firstCard = null;
 
+let availableVoices = [];
+window.speechSynthesis.onvoiceschanged = () => {
+    availableVoices = window.speechSynthesis.getVoices();
+};
+
 const stations = [
     {file:"01_GlasfensterTester.mp3", title:"1. Der Glasfenster-Tester"},
     {file:"02_KaktusAngreifer.mp3", title:"2. Der Riesen-Kaktus-Angreifer"},
@@ -60,7 +65,13 @@ document.getElementById('btn-back').onclick = () => {
     currentQ = 0; attempts = 0;
 };
 
-document.getElementById('btn-start').onclick = () => { splash.classList.add('hidden'); instr.classList.remove('hidden'); };
+document.getElementById('btn-start').onclick = () => { 
+    splash.classList.add('hidden'); 
+    instr.classList.remove('hidden'); 
+    const unlockSpeech = new SpeechSynthesisUtterance('');
+    window.speechSynthesis.speak(unlockSpeech);
+};
+
 document.getElementById('btn-enter').onclick = () => { instr.classList.add('hidden'); app.classList.remove('hidden'); };
 
 document.getElementById('ctrl-play').onclick = () => audio.play();
@@ -98,10 +109,18 @@ document.getElementById('btn-game').onclick = () => {
     let set = [...wordBucket];
     for (let k in lesson.dict) { if (set.length >= 8) break; if (!set.some(p => p.de === k)) set.push({de: k, tr: lesson.dict[k]}); }
     let deck = [];
-    set.forEach(p => { deck.push({text: p.de, match: p.tr}); deck.push({text: p.tr, match: p.de}); });
+    
+    set.forEach(p => { 
+        deck.push({text: p.de, match: p.tr, lang: "lang-de"}); 
+        deck.push({text: p.tr, match: p.de, lang: "lang-tr"}); 
+    });
+    
     deck.sort(() => Math.random() - 0.5);
     deck.forEach(card => {
-        const div = document.createElement('div'); div.className = 'game-card'; div.innerText = card.text;
+        const div = document.createElement('div'); 
+        div.className = `game-card ${card.lang}`; 
+        div.innerText = card.text;
+        
         div.onclick = () => {
             if (div.classList.contains('correct') || div.classList.contains('selected')) return;
             if (firstCard) {
@@ -117,6 +136,7 @@ document.getElementById('btn-game').onclick = () => {
 };
 
 document.getElementById('btn-bowling').onclick = () => {
+    audio.pause(); 
     let fn = decodeURIComponent(audio.src.split('/').pop()); 
     const lesson = lessonData[fn][0];
     transcript.classList.add('hidden'); gameZone.classList.remove('hidden'); gameBoard.style.display = "none";
@@ -131,38 +151,64 @@ function runQuiz(lesson) {
         <div id="quiz-container">
             <div class="score-badge">SCORE: ${totalScore} | Q: ${currentQ+1}/7</div>
             <button id="btn-hear-q" class="mode-btn neon-green">👂 FRAGE HÖREN</button>
-            <div id="mic-box" class="hidden" style="margin-top:20px;">
+            <div id="mic-box" style="margin-top:20px;">
                 <button id="btn-speak" class="mic-btn">🎤</button>
-                <p id="mic-status" style="color:#666; font-weight:bold;">Bereit...</p>
+                <p id="mic-status" style="color:#aaa; font-weight:bold;">Tippe auf das Mikrofon zum Sprechen</p>
             </div>
             <div id="res-area"></div>
         </div>`;
     
     document.getElementById('btn-hear-q').onclick = () => {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(qData.q);
-        window.currentUtter = utter; 
-        utter.lang = 'de-DE';
-        const voices = window.speechSynthesis.getVoices();
-        if (voices.length > 0) {
-            let v = voices.find(v => v.lang.startsWith('de'));
-            utter.voice = v || voices[0];
-        }
-        utter.onend = () => { document.getElementById('mic-box').classList.remove('hidden'); };
-        window.speechSynthesis.speak(utter);
+        audio.pause(); 
+        window.speechSynthesis.cancel(); 
+        
+        setTimeout(() => {
+            const utter = new SpeechSynthesisUtterance(qData.q);
+            window.currentUtter = utter; 
+            utter.lang = 'de-DE';
+            utter.volume = 1.0; 
+            utter.rate = 0.9; 
+            
+            let voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                let deVoice = voices.find(v => v.lang.toLowerCase().includes('de'));
+                if (deVoice) {
+                    utter.voice = deVoice;
+                }
+            }
+            window.speechSynthesis.speak(utter);
+        }, 100);
     };
     
     document.getElementById('btn-speak').onclick = function() {
         const btn = this; const status = document.getElementById('mic-status');
-        window.currentRec = new (window.webkitSpeechRecognition || window.SpeechRecognition)();
+        const SpeechRec = window.webkitSpeechRecognition || window.SpeechRecognition;
+        
+        if (!SpeechRec) {
+            status.innerHTML = "⚠️ Browser blockiert das Mikrofon.";
+            status.style.color = "#ff4444";
+            return;
+        }
+        
+        window.currentRec = new SpeechRec();
         window.currentRec.lang = 'de-DE';
         window.currentRec.onstart = () => { btn.classList.add('active'); status.innerText = "Hört zu..."; };
+        
+        window.currentRec.onerror = (e) => {
+            btn.classList.remove('active');
+            status.innerHTML = `Fehler: ${e.error}. Versuche es erneut.`;
+            status.style.color = "#ff4444";
+        };
+        
+        window.currentRec.onend = () => { btn.classList.remove('active'); };
+        
         window.currentRec.onresult = (e) => {
-            document.getElementById('mic-box').classList.add('hidden'); 
             const rawTranscript = e.results[0][0].transcript;
             const res = rawTranscript.toLowerCase().trim().replace(/[^a-z0-9äöüß]/g, "");
             const rawAns = qData.a_de || qData.a_en || ""; 
             const ans = rawAns.toLowerCase().trim().replace(/[^a-z0-9äöüß]/g, "");
+            
+            document.getElementById('mic-box').style.display = 'none';
             
             if (res === ans) {
                 let pts = (attempts === 0) ? 20 : 15; totalScore += pts;
@@ -186,7 +232,13 @@ function showResult(isCorrect, msg, qData, lesson, canRetry = false) {
         document.getElementById('btn-nxt').onclick = () => { currentQ++; attempts = 0; runQuiz(lesson); };
     } else {
         area.innerHTML += `<button id="btn-retry" class="action-btn-large">NOCHMAL VERSUCHEN</button>`;
-        document.getElementById('btn-retry').onclick = () => { area.innerHTML = ""; document.getElementById('mic-box').classList.remove('hidden'); document.getElementById('btn-speak').classList.remove('active'); };
+        document.getElementById('btn-retry').onclick = () => { 
+            area.innerHTML = ""; 
+            document.getElementById('mic-box').style.display = 'block'; 
+            document.getElementById('btn-speak').classList.remove('active'); 
+            document.getElementById('mic-status').innerText = "Tippe auf das Mikrofon zum Sprechen";
+            document.getElementById('mic-status').style.color = "#aaa";
+        };
     }
 }
 
