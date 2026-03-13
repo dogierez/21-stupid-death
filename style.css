@@ -20,6 +20,10 @@ body, html { background: #000; color: #fff; font-family: sans-serif; margin: 0; 
 .game-card.wrong { border-color: #ff4444; }
 .game-card.selected { border-color: #ff00ff; box-shadow: 0 0 15px #ff00ff; }
 
+/* Language Colors for the Matching Game */
+.game-card.lang-de { color: #ffaa00; text-shadow: 0 0 8px #ffaa0088; } 
+.game-card.lang-tr { color: #39ff14; text-shadow: 0 0 8px #39ff1488; } 
+
 .quiz-q-text { color: #39ff14; font-size: 38px; font-weight: bold; margin: 20px 0; }
 .quiz-a-text { color: #00e5ff; font-size: 46px; font-weight: bold; margin: 15px 0; }
 .score-badge { color: #ccff00; font-size: 32px; font-weight: bold; margin-bottom: 20px; }
